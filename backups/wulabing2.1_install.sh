@@ -2,9 +2,10 @@
 
 #====================================================
 #	System Request:Debian 7+/Ubuntu 14.04+/Centos 6+
-#	Author:	wulabing & oo0.bid
-#	Dscription: V2RAY 基于 NGINX 的 VMESS+WS+TLS+Website(Use Host)+Rinetd BBR
-#	Blog: https://www.wulabing.com https://oo0.bid
+#	Author:	wulabing
+#	Dscription: V2ray ws+tls onekey 
+#	Version: 2.1
+#	Blog: https://www.wulabing.com
 #	Official document: www.v2ray.com
 #====================================================
 
@@ -214,7 +215,7 @@ ssl_install(){
 
 }
 domain_check(){
-    stty erase '^H' && read -p "请输入你的域名信息(eg:www.bing.com):" domain
+    stty erase '^H' && read -p "请输入你的域名信息(eg:www.wulabing.com):" domain
     ## ifconfig
     ## stty erase '^H' && read -p "请输入公网 IP 所在网卡名称(default:eth0):" broadcast
     ## [[ -z ${broadcast} ]] && broadcast="eth0"
@@ -279,7 +280,7 @@ v2ray_conf_add(){
     "settings": {
       "clients": [
         {
-          "id": "UserUUID",
+          "id": "b831381d-6324-4d53-ad4f-8cda48b30811",
           "alterId": 64
         }
       ]
@@ -287,10 +288,7 @@ v2ray_conf_add(){
     "streamSettings":{
       "network":"ws",
       "wsSettings": {
-      "path": "/",
-	  "headers": {
-	  "Host": "www.PathUUID.com"
-	  }
+      "path": "/ray/"
       }
     }
   },
@@ -321,15 +319,13 @@ nginx_conf_add(){
         ssl_protocols         TLSv1 TLSv1.1 TLSv1.2;
         ssl_ciphers           HIGH:!aNULL:!MD5;
         server_name           serveraddr.com;
-        location / {
+        location /ray/ {
         proxy_redirect off;
+        proxy_pass http://127.0.0.1:10000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host \$http_host;
-		if (\$http_host = "www.PathUUID.com" ) {
-		proxy_pass http://127.0.0.1:10000;
-		}
         }
 }
 EOF
@@ -369,7 +365,7 @@ start_process_systemd(){
 show_information(){
     clear
 
-    echo -e "${OK} ${Green} V2RAY 基于 NGINX 的 VMESS+WS+TLS+Website(Use Host)+Rinetd BBR 安装成功 "
+    echo -e "${OK} ${Green} V2ray+ws+tls 安装成功 "
     echo -e "${Red} V2ray 配置信息 ${Font}"
     echo -e "${Red} 地址（address）:${Font} ${domain} "
     echo -e "${Red} 端口（port）：${Font} ${port} "
@@ -378,58 +374,16 @@ show_information(){
     echo -e "${Red} 加密方式（security）：${Font} 自适应 "
     echo -e "${Red} 传输协议（network）：${Font} ws "
     echo -e "${Red} 伪装类型（type）：${Font} none "
-    echo -e "${Red} 伪装域名（不要忘记斜杠/）：${Font} /;www.${UUID2}.com "
+    echo -e "${Red} 伪装域名（不要落下/）：${Font} /ray/ "
     echo -e "${Red} 底层传输安全：${Font} tls "
 
+    
+
 }
-
-
-
-apache_uninstall(){
-    echo -e "${OK} ${GreenBG} 正在尝试清除残留的HTTP服务 ${Font}"
-    sleep 2
-    service apache2 stop
-    update-rc.d -f apache2 remove
-    systemctl disable apache2
-	systemctl stop apache2
-	${INS} purge apache2 -y	
-	service nginx stop
-    update-rc.d -f nginx remove
-    systemctl disable nginx
-	systemctl stop nginx
-	${INS} purge nginx -y
-}
-
-web_install(){
-    echo -e "${OK} ${GreenBG} 正在安装Website伪装站点 ${Font}"
-    sleep 2
-	wget https://github.com/dylanbai8/V2Ray_ws-tls_Website_onekey/raw/master/V2rayWebsite.tar.gz
-	tar -zxvf V2rayWebsite.tar.gz -C /usr/share/nginx/html/
-	rm -f V2rayWebsite.tar.gz
-}
-
-rinetdbbr_install(){
-    echo -e "${OK} ${GreenBG} 正在安装RinetdBBR加速服务 ${Font}"
-    sleep 2
-	wget https://raw.githubusercontent.com/linhua55/lkl_study/master/get-rinetd.sh
-    echo -e "${OK} ${GreenBG} 按提示输入“443”或其它需要加速的端口 ${Font}"
-    sleep 2
-	bash get-rinetd.sh
-	rm -f get-rinetd.sh
-}
-
-modify_PathUUID(){
-	UUID2=$(cat /proc/sys/kernel/random/uuid)
-	sed -i "s/PathUUID/${UUID2}/g" "/etc/nginx/conf.d/v2ray.conf"
-	sed -i "s/PathUUID/${UUID2}/g" "/etc/v2ray/config.json"
-}
-
-
 
 main(){
     is_root
     check_system
-	apache_uninstall
     time_modify
     dependency_install
     domain_check
@@ -440,11 +394,8 @@ main(){
     ssl_install
     acme
     nginx_install
-	web_install
     v2ray_conf_add
     nginx_conf_add
-	modify_PathUUID
-	rinetdbbr_install
     show_information
     start_process_systemd
 }
